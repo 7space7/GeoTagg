@@ -1,4 +1,8 @@
 <resources>
     <string name="app_name">GeoTagg</string>
     <string name="title_activity_maps">Map</string>
+
+
+    <string name="content_authority">com.ua.viktor.geotagg.app</string>
+    <string name="title_activity_tagging">TaggingActivity</string>
 </resources>
