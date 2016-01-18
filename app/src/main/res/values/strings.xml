@@ -1,8 +1,17 @@
 <resources>
-    <string name="app_name">GeoTagg</string>
+    <string name="app_name">GeoTag</string>
     <string name="title_activity_maps">Map</string>
 
 
     <string name="content_authority">com.ua.viktor.geotagg.app</string>
     <string name="title_activity_tagging">TaggingActivity</string>
+
+    <string name="hint_add_tag_list">Name</string>
+    <string name="hint_add_tag_url_image">Image url</string>
+    <string name="positive_button_add_list_item">Add item</string>
+    <string name="positive_button_create">Create</string>
+    <string name="dialog_message_are_you_sure_remove_item">Are you sure you want to remove this item?</string>
+
+    <string name="action_remove_list">Remove list</string>
+    <string name="remove_item_option">Remove Item</string>
 </resources>

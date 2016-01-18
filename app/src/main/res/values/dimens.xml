@@ -3,4 +3,9 @@
     <dimen name="activity_horizontal_margin">16dp</dimen>
     <dimen name="activity_vertical_margin">16dp</dimen>
     <dimen name="fab_margin">16dp</dimen>
+
+    <dimen name="list_item_text_size">16.6sp</dimen>
+    <dimen name="list_created_by_text_size">12sp</dimen>
+
+    <dimen name="lists_row_height">70dp</dimen>
 </resources>
