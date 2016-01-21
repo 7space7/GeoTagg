@@ -7,4 +7,10 @@ public final class Constants {
 
     public static final String KEY_LONGTITUDE = "LONGTITUDE";
     public static final String KEY_LATITUDE = "LATITUDE";
+
+    public static final String KEY_FILE_PATH = "PATH";
+    public static final String KEY_FILE_NAME="NAME";
+
+    public static final String NAME_DIRECTORY = "imageDir";
+
 }

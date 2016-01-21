@@ -7,8 +7,10 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import com.ua.viktor.geotagg.R;
+import com.ua.viktor.geotagg.data.TagsContract;
 
 /**
  * Created by viktor on 17.01.16.
@@ -19,15 +21,6 @@ public class TagAdapter extends CursorAdapter {
     private static int sLoaderID;
 
 
-    public static class ViewHolder {
-       // public final ImageView imageView;
-       // public final TextView textView;
-
-        public ViewHolder(View view){
-           // imageView = (ImageView) view.findViewById(R.id.flavor_image);
-            //textView = (TextView) view.findViewById(R.id.flavor_text);
-        }
-    }
 
     public TagAdapter(Context context, Cursor c, int flags, int loaderID){
         super(context, c, flags);
@@ -38,31 +31,26 @@ public class TagAdapter extends CursorAdapter {
 
     @Override
     public View newView(Context context, Cursor cursor, ViewGroup parent) {
-        int layoutId = R.layout.tagging_item;
-
-        Log.d(LOG_TAG, "In new View");
-
-        View view = LayoutInflater.from(context).inflate(layoutId, parent, false);
-        ViewHolder viewHolder = new ViewHolder(view);
-        view.setTag(viewHolder);
-        return view;
+        return LayoutInflater.from(context).inflate(R.layout.tagging_item, parent, false);
     }
 
     @Override
     public void bindView(View view, Context context, Cursor cursor) {
 
-        ViewHolder viewHolder = (ViewHolder) view.getTag();
 
-        Log.d(LOG_TAG, "In bind View");
+        TextView  textView = (TextView) view.findViewById(R.id.text_view_active_list_item_name);
 
-       // int versionIndex = cursor.getColumnIndex(FlavorsContract.FlavorEntry.COLUMN_VERSION_NAME);
-       // final String versionName = cursor.getString(versionIndex);
-       // viewHolder.textView.setText(versionName);
+        final String versionName = cursor.getString(cursor.getColumnIndexOrThrow(TagsContract.TagEntry.COLUMN_ICON));;
+        textView.setText(versionName);
 
        // int imageIndex = cursor.getColumnIndex(FlavorsContract.FlavorEntry.COLUMN_ICON);
         //int image = cursor.getInt(imageIndex);
       //  Log.i(LOG_TAG, "Image reference extracted: " + image);
 
        // viewHolder.imageView.setImageResource(image);
+    }
+
+    public void updateList(){
+        notifyDataSetChanged();
     }
 }

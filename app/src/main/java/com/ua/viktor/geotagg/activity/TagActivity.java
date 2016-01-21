@@ -4,9 +4,13 @@ import android.Manifest;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.DialogFragment;
+import android.app.LoaderManager;
+import android.content.CursorLoader;
 import android.content.IntentSender;
+import android.content.Loader;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
@@ -14,7 +18,7 @@ import android.preference.PreferenceManager;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 import android.view.View;
-import android.widget.Toast;
+import android.widget.ListView;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -28,21 +32,29 @@ import com.google.android.gms.location.LocationSettingsResult;
 import com.google.android.gms.location.LocationSettingsStates;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.ua.viktor.geotagg.R;
+import com.ua.viktor.geotagg.adapter.TagAdapter;
+import com.ua.viktor.geotagg.data.TagsContract;
 import com.ua.viktor.geotagg.dialog.AddTagDialogFragment;
 import com.ua.viktor.geotagg.dialog.RemoveTagDialogFragment;
+import com.ua.viktor.geotagg.utils.Constants;
 
-public class TagActivity extends Activity implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
+@TargetApi(Build.VERSION_CODES.HONEYCOMB)
+public class TagActivity extends Activity implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,LoaderManager.LoaderCallbacks<Cursor> {
     private static final String TAG = TagActivity.class.getName();
     private String mEncodedEmail = "";
     private GoogleApiClient mGoogleApiClient;
     private static final int MY_LOCATION_REQUEST_CODE = 2;
-    private static final int EXTERNAL_STORAGE = 200;
     private Location mLastLocation;
-
+    private static final int CURSOR_LOADER_ID = 0;
+    private TagAdapter mTagAdap;
+    private ListView mListView;
+    @TargetApi(Build.VERSION_CODES.HONEYCOMB)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tag);
+
+
 
         if (mGoogleApiClient == null) {
             mGoogleApiClient = new GoogleApiClient.Builder(this)
@@ -51,40 +63,43 @@ public class TagActivity extends Activity implements GoogleApiClient.ConnectionC
                     .addApi(LocationServices.API)
                     .build();
         }
-        // addLocationPermission();
-        //  buildGoogleApiClient();
 
+        getLoaderManager().initLoader(CURSOR_LOADER_ID, null,this);
+        getContentResolver().notifyChange(TagsContract.TagEntry.CONTENT_URI, null, false);
+
+        mListView = (ListView) findViewById(R.id.listView);
+
+
+        mTagAdap = new TagAdapter(this, null, 0, CURSOR_LOADER_ID);
+        mListView.setAdapter(mTagAdap);
 
     }
 
+
+
     @TargetApi(Build.VERSION_CODES.HONEYCOMB)
     public void showAddListDialog(View view) {
+
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
+        SharedPreferences.Editor spe = sp.edit();
+        spe.putString(Constants.KEY_FILE_PATH, null).apply();
+        spe.putString(Constants.KEY_FILE_NAME, null).apply();
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
             return;
         }
         mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
         if (mLastLocation != null) {
-            SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
-            SharedPreferences.Editor spe = sp.edit();
-            spe.putString("file_uri", null).apply();
+            Log.v(TAG, "lon " + mLastLocation.getLongitude() + " lat" + mLastLocation.getLatitude());
             DialogFragment dialog = AddTagDialogFragment.newInstance(mLastLocation.getLongitude(),mLastLocation.getLatitude());
             dialog.show(TagActivity.this.getFragmentManager(), "AddTagDialogFragment");
-        }else {
-
         }
+        mTagAdap.notifyDataSetChanged();
     }
+
 
 
     @TargetApi(Build.VERSION_CODES.HONEYCOMB)
     public void removeList() {
-        /* Create an instance of the dialog fragment and show it */
         DialogFragment dialog = RemoveTagDialogFragment.newInstance(mEncodedEmail);
         dialog.show(getFragmentManager(), "RemoveTagDialogFragment");
     }
@@ -92,6 +107,8 @@ public class TagActivity extends Activity implements GoogleApiClient.ConnectionC
     @Override
     public void onStart() {
         super.onStart();
+        getLoaderManager().restartLoader(CURSOR_LOADER_ID, null, this);
+
         mGoogleApiClient.connect();
         addLocationPermission();
         buildGoogleApiClient();
@@ -109,32 +126,22 @@ public class TagActivity extends Activity implements GoogleApiClient.ConnectionC
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                 && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
             return;
         }
         mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
         if (mLastLocation != null) {
-            //  mLatitudeText.setText(String.format("%s: %f", mLatitudeLabel,
-            //         mLastLocation.getLatitude()));
-            // mLongitudeText.setText(String.format("%s: %f", mLongitudeLabel,
-            //         mLastLocation.getLongitude()));
-            Toast.makeText(this, "lon " + mLastLocation.getLongitude() + " lat" + mLastLocation.getLatitude(), Toast.LENGTH_LONG).show();
             Log.v(TAG, "lon " + mLastLocation.getLongitude() + " lat" + mLastLocation.getLatitude());
 
         } else {
-            Toast.makeText(this, "no", Toast.LENGTH_LONG).show();
+            Log.v(TAG, "no");
         }
     }
 
+    @TargetApi(Build.VERSION_CODES.HONEYCOMB)
     @Override
     protected void onResume() {
         super.onResume();
+
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                 && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             buildGoogleApiClient();
@@ -146,15 +153,11 @@ public class TagActivity extends Activity implements GoogleApiClient.ConnectionC
 
     @Override
     public void onConnectionFailed(ConnectionResult result) {
-        // Refer to the javadoc for ConnectionResult to see what error codes might be returned in
-        // onConnectionFailed.
         Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = " + result.getErrorCode());
     }
 
     @Override
     public void onConnectionSuspended(int cause) {
-        // The connection to Google Play services was lost for some reason. We call connect() to
-        // attempt to re-establish the connection.
         Log.i(TAG, "Connection suspended");
         mGoogleApiClient.connect();
     }
@@ -173,8 +176,7 @@ public class TagActivity extends Activity implements GoogleApiClient.ConnectionC
             }
         } else {
             // permission has been granted, continue as usual
-            // Location myLocation =
-            //     LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+
         }
     }
 
@@ -186,13 +188,10 @@ public class TagActivity extends Activity implements GoogleApiClient.ConnectionC
                 if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     return;
                 }
-                // mMap.setMyLocationEnabled(true);
             } else {
                 // Permission was denied. Display an error message.
-            }
-        }
-        else if(requestCode==EXTERNAL_STORAGE){
 
+            }
         }
     }
 
@@ -244,5 +243,27 @@ public class TagActivity extends Activity implements GoogleApiClient.ConnectionC
                 }
             });
 
-        }
+    }
+
+
+    @TargetApi(Build.VERSION_CODES.HONEYCOMB)
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+        return new CursorLoader(getApplication(),
+                TagsContract.TagEntry.CONTENT_URI,
+                null,
+                null,
+                null,
+                null);
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        mTagAdap.swapCursor(data);
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+        mTagAdap.swapCursor(null);
+    }
 }

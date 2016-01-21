@@ -119,6 +119,7 @@ public class TagsProvider extends ContentProvider{
 
             }
         }
+
         getContext().getContentResolver().notifyChange(uri, null);
         return returnUri;
     }

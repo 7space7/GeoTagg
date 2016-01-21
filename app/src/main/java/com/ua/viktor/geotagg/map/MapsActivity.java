@@ -2,15 +2,18 @@ package com.ua.viktor.geotagg.map;
 
 import android.Manifest;
 import android.annotation.TargetApi;
+import android.app.LoaderManager;
+import android.content.CursorLoader;
 import android.content.IntentSender;
+import android.content.Loader;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
-import android.view.View;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -24,7 +27,7 @@ import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.LocationSettingsResult;
 import com.google.android.gms.location.LocationSettingsStates;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
-import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
@@ -33,22 +36,28 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.ua.viktor.geotagg.R;
+import com.ua.viktor.geotagg.adapter.MapInfoWindowAdapter;
+import com.ua.viktor.geotagg.data.TagsContract;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, GoogleMap.OnInfoWindowClickListener {
+import java.util.Hashtable;
+
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, GoogleMap.OnInfoWindowClickListener, LoaderManager.LoaderCallbacks<Cursor> {
 
     private static final int MY_LOCATION_REQUEST_CODE = 2;
     private static final String TAG = MapsActivity.class.getName();
     private GoogleMap mMap;
     private GoogleApiClient mGoogleApiClient;
     private Location mLastLocation;
-
+    private SupportMapFragment mapFragment;
+    private static final int CURSOR_LOADER_ID = 0;
+    private Hashtable<String, Boolean> markerSet;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+        mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
@@ -214,38 +223,93 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+    @TargetApi(Build.VERSION_CODES.HONEYCOMB)
     @Override
     public void onMapReady(GoogleMap googleMap) {
-        mMap = googleMap;
-        mMap.setOnInfoWindowClickListener(MapsActivity.this);
-        // Add a marker in Sydney and move the camera
-        LatLng sydney = new LatLng(-34, 151);
-        mMap.addMarker(new MarkerOptions()
-                .position(sydney)
-                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
-                .title("Marker in Sydney"));
-
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(sydney, 10));
-
-        mMap.setInfoWindowAdapter(new GoogleMap.InfoWindowAdapter() {
-            @Override
-            public View getInfoWindow(Marker marker) {
-                return null;
-            }
-
-            @Override
-            public View getInfoContents(Marker marker) {
-                View myContentsView = getLayoutInflater().inflate(R.layout.map_info_content, null);
-                //ImageView imageView = (ImageView) myContentsView.findViewById(R.id.imgView_map_info_content);
-
-                return myContentsView;
-            }
-        });
+        getLoaderManager().initLoader(CURSOR_LOADER_ID, null, this);
     }
 
     @Override
     public void onInfoWindowClick(Marker marker) {
         Toast.makeText(this, "Info window clicked",
                 Toast.LENGTH_SHORT).show();
+    }
+
+    @TargetApi(Build.VERSION_CODES.HONEYCOMB)
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+        return new CursorLoader(getApplication(),
+                TagsContract.TagEntry.CONTENT_URI,
+                null,
+                null,
+                null,
+                null);
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, final Cursor data) {
+
+        if (mapFragment != null) {
+            mapFragment.getMapAsync(new OnMapReadyCallback() {
+                                        @Override
+                                        public void onMapReady(GoogleMap googleMap) {
+
+                                            mMap = googleMap;
+                                            if (ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                                                // TODO: Consider calling
+                                                //    ActivityCompat#requestPermissions
+                                                // here to request the missing permissions, and then overriding
+                                                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                                                //                                          int[] grantResults)
+                                                // to handle the case where the user grants the permission. See the documentation
+                                                // for ActivityCompat#requestPermissions for more details.
+                                                return;
+                                            }
+                                            googleMap.setMyLocationEnabled(true);
+
+                                            while (data.moveToNext()) {
+                                                markerSet = new Hashtable<>();
+
+                                                LatLng position = new LatLng(data.getDouble(data.getColumnIndex(TagsContract.TagEntry.COLUMN_COORD_LAT)),
+                                                        data.getDouble(data.getColumnIndex(TagsContract.TagEntry.COLUMN_COORD_LONG)));
+                                                MarkerOptions markerOptions = new MarkerOptions()
+                                                        .snippet(data.getString(data.getColumnIndex(TagsContract.TagEntry.COLUMN_ICON)))
+                                                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+                                                        .position(position);
+                                                Marker marker = mMap.addMarker(markerOptions);
+                                                markerSet.put(marker.getId(), false);
+
+
+                                                CameraUpdate cameraUpdate = null;
+              /*  Location lastKnownLocationGPS = mLocationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                Location lastKnownLocationNetwork = mLocationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                Location lastKnownLocationPassive = mLocationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER);
+
+                if (lastKnownLocationGPS != null) {
+                    cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(lastKnownLocationGPS.getLatitude(), lastKnownLocationGPS.getLongitude()), 14);
+                } else if (lastKnownLocationNetwork != null) {
+                    cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(lastKnownLocationNetwork.getLatitude(), lastKnownLocationNetwork.getLongitude()), 14);
+                } else if (lastKnownLocationPassive != null) {
+                    cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(lastKnownLocationPassive.getLatitude(), lastKnownLocationPassive.getLongitude()), 14);
+                } else {
+                    cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(41.6137143, 21.743258), 8);
+                }*/
+                                                // googleMap.animateCamera(cameraUpdate);
+                                            }
+
+                                            data.moveToPosition(-1);
+                                            mMap.setInfoWindowAdapter(new MapInfoWindowAdapter(MapsActivity.this, markerSet));
+                                        }
+                                    }
+
+            );
+        } else {
+            Log.v(TAG, "mMapFragment is null");
+        }
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+
     }
 }

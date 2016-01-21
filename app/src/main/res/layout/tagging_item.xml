@@ -8,6 +8,8 @@
               android:foreground="?selectableItemBackground"
               android:gravity="center_vertical"
               android:orientation="horizontal"
+              android:paddingLeft="16dp"
+              android:paddingStart="16dp"
              >
 
     <TextView

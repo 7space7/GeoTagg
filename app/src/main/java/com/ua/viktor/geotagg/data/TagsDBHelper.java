@@ -27,7 +27,7 @@ public class TagsDBHelper extends SQLiteOpenHelper {
                 TagsContract.TagEntry.COLUMN_DESCRIPTION + " TEXT NOT NULL, " +
                 TagsContract.TagEntry.COLUMN_COORD_LAT + " REAL NOT NULL, " +
                 TagsContract.TagEntry.COLUMN_COORD_LONG + " REAL NOT NULL, " +
-                TagsContract.TagEntry.COLUMN_DATE + " INTEGER NOT NULL, " +
+                TagsContract.TagEntry.COLUMN_DATE + " DATETIME NOT NULL, " +
                 TagsContract.TagEntry.COLUMN_ICON + " TEXT NOT NULL);";
 
         sqLiteDatabase.execSQL(SQL_CREATE_TAG_TABLE);
